@@ -53,7 +53,6 @@ class LlamaAttention(nn.Module):
         )
 
     def _compute_rope_embeddings(self, max_position_embeddings, head_dim, base=10000, dtype=None, device=None):
-        """Compute RoPE embeddings similar to LlamaRotaryEmbedding"""
         inv_freq = 1.0 / (base ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
         t = torch.arange(max_position_embeddings, device=device, dtype=torch.float32)
         freqs = torch.einsum("i,j->ij", t, inv_freq)
