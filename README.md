@@ -8,3 +8,6 @@ Same hardware, modeling took:
 `Compiling took: 0.50 seconds -- Execution time: 0.57 seconds` x2 `Compiling took: 0.50 seconds -- Execution time: 0.58 seconds`
 
 There's about a 100% speedup if you count the compile time and a 200% speedup in terms of expected speedup.
+
+Changelog:
+2/2/25 -- Added liger rope kernel. This is 20% slower in the singular test (because of JIT) but about 20% faster in only 10 iterations, so a significant speedup.
