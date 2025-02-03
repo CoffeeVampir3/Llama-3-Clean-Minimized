@@ -42,6 +42,7 @@ def load_model(model_path: str, config_path: str, device):
     return model.to(device)
 
 device="cuda"
+forward_dtype = torch.float16
 model = load_model("./SmolLM2-135M-Instruct/model.safetensors", "./SmolLM2-135M-Instruct/config.json", device)
 
 count_parameters(model)
@@ -54,8 +55,6 @@ inputs = tokenizer(input_text, return_tensors="pt")
 imstart = tokenizer("<|im_start|>assistant\n", return_tensors="pt")
 combined_input = torch.cat([inputs.input_ids, imstart.input_ids], dim=1).to(device)
 
-forward_dtype = torch.float16
-
 # Verify we can compile the model.
 model = torch.compile(model)
 
@@ -67,7 +66,7 @@ torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
 start_time = time.time()
-with torch.amp.autocast(device, dtype=forward_dtype):
+with torch.no_grad(), torch.amp.autocast(device, dtype=forward_dtype):
     output_ids = model.generate(combined_input.to(device), max_new_tokens=30, temperature=0.0)
 end_time = time.time()
 elapsed_time = end_time - start_time

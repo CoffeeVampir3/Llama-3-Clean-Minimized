@@ -22,6 +22,9 @@ def count_parameters(model):
     return total_params, trainable_params, param_size
 
 mpath = "SmolLM2-135M-Instruct"
+
+device="cuda"
+forward_dtype = torch.float16
 model = AutoModelForCausalLM.from_pretrained(f"./{mpath}/")
 tokenizer = AutoTokenizer.from_pretrained(f"./{mpath}/")
 
@@ -43,12 +46,12 @@ print(tokenizer.decode(combined_input[0]))
 
 start_time = time.time()
 output = model(combined_input)
-for _ in range(30):
-    output = model(combined_input)
-    logits = output.logits[:, -1, :]
-    next_token = torch.argmax(logits, dim=-1)
-    decoded = tokenizer.decode(next_token)
-    combined_input = torch.cat([combined_input, next_token.unsqueeze(0)], dim=1)
+with torch.no_grad(), torch.amp.autocast(device, dtype=forward_dtype):
+    for _ in range(30):
+        output = model(combined_input)
+        logits = output.logits[:, -1, :]
+        next_token = torch.argmax(logits, dim=-1)
+        combined_input = torch.cat([combined_input, next_token.unsqueeze(0)], dim=1)
 
 end_time = time.time()
 elapsed_time = end_time - start_time
