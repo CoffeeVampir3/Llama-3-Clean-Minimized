@@ -42,6 +42,13 @@ inputs = tokenizer(input_text, return_tensors="pt")
 imstart = tokenizer("<|im_start|>assistant\n", return_tensors="pt")
 combined_input = torch.cat([inputs.input_ids, imstart.input_ids], dim=1)
 
+# Does not like being compiled, never completes in my test. No idea why.
+# start_time = time.time()
+# model = torch.compile(model)
+# end_time = time.time()
+# elapsed_time = end_time - start_time
+# print(f"Compiling took: {elapsed_time:.2f} seconds")
+
 start_time = time.time()
 output = model(combined_input)
 with torch.no_grad(), torch.amp.autocast(device, dtype=forward_dtype):

@@ -56,7 +56,11 @@ imstart = tokenizer("<|im_start|>assistant\n", return_tensors="pt")
 combined_input = torch.cat([inputs.input_ids, imstart.input_ids], dim=1).to(device)
 
 # Verify we can compile the model.
+start_time = time.time()
 model = torch.compile(model)
+end_time = time.time()
+elapsed_time = end_time - start_time
+print(f"Compiling took: {elapsed_time:.2f} seconds")
 
 SEED = 42
 torch.manual_seed(SEED)
