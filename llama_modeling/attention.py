@@ -41,7 +41,7 @@ class LlamaAttention(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:
-        bsz, q_len, _ = hidden_states.size()
+        bsz, _, _ = hidden_states.size()
         
         if position_ids is None:
             position_ids = repeat(

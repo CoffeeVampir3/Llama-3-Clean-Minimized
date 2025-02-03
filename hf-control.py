@@ -42,8 +42,6 @@ inputs = tokenizer(input_text, return_tensors="pt")
 imstart = tokenizer("<|im_start|>assistant\n", return_tensors="pt")
 combined_input = torch.cat([inputs.input_ids, imstart.input_ids], dim=1)
 
-print(tokenizer.decode(combined_input[0]))
-
 start_time = time.time()
 output = model(combined_input)
 with torch.no_grad(), torch.amp.autocast(device, dtype=forward_dtype):
