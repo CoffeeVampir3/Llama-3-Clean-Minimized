@@ -139,9 +139,6 @@ def _triton_rope(
 def rope_forward(q, k, cos, sin):
     # transpose it back to the physical shape because Triton looks at the physical storage
     # note: q and k are incontiguous before the transformation and will become contiguous after transpose
-    q = q.transpose(1, 2)
-    k = k.transpose(1, 2)
-
     batch_size, seq_len, n_q_head, head_dim = q.shape
     n_kv_head = k.shape[2]
     pad_hd = triton.next_power_of_2(head_dim)
@@ -179,13 +176,10 @@ def rope_forward(q, k, cos, sin):
         BLOCK_SIZE=BLOCK_SIZE,
         BACKWARD_PASS=False,
     )
-    return q.transpose(1, 2), k.transpose(1, 2), cos, sin
+    return q, k, cos, sin
 
 
 def rope_backward(dq, dk, cos, sin):
-    dq = dq.transpose(1, 2)
-    dk = dk.transpose(1, 2)
-
     batch_size, seq_len, n_q_head, head_dim = dq.shape
     cos_batch_size = cos.shape[0]
     n_kv_head = dk.shape[2]
@@ -222,7 +216,7 @@ def rope_backward(dq, dk, cos, sin):
         BLOCK_SIZE=BLOCK_SIZE,
         BACKWARD_PASS=True,
     )
-    return dq.transpose(1, 2), dk.transpose(1, 2)
+    return dq, dk
 
 
 class LigerRopeFunction(torch.autograd.Function):

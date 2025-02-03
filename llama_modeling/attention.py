@@ -93,10 +93,10 @@ class LlamaAttention(nn.Module):
 
         # Reshape for RoPE
         # Reshape for RoPE
-        query_states = rearrange(query_states, "b s (h d) -> b h s d", h=self.num_heads, d=self.head_dim)
-        key_states = rearrange(key_states, "b s (h d) -> b h s d", h=self.num_key_value_heads, d=self.head_dim)
-        value_states = rearrange(value_states, "b s (h d) -> b h s d", h=self.num_key_value_heads, d=self.head_dim)
-        
+        query_states = rearrange(query_states, "b s (h d) -> b s h d", h=self.num_heads, d=self.head_dim)
+        key_states = rearrange(key_states, "b s (h d) -> b s h d", h=self.num_key_value_heads, d=self.head_dim)
+        value_states = rearrange(value_states, "b s (h d) -> b s h d", h=self.num_key_value_heads, d=self.head_dim)
+
         # Get position-specific cos and sin
         cos = self.cos_cached[:, position_ids]  # [1, bsz, seq_len, dim]
         sin = self.sin_cached[:, position_ids]  # [1, bsz, seq_len, dim]
@@ -109,12 +109,7 @@ class LlamaAttention(nn.Module):
             sin.squeeze(0),
             position_ids
         )
-        
-        # Reshape for flash attention
-        query_states = rearrange(query_states, "b h s d -> b s h d")
-        key_states = rearrange(key_states, "b h s d -> b s h d")
-        value_states = rearrange(value_states, "b h s d -> b s h d")
-        
+
         attn_output = flash_attn_func(
             query_states,
             key_states,
