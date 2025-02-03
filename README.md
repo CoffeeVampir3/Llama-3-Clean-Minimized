@@ -9,5 +9,5 @@ Same hardware, modeling took:
 
 There's about a 100% speedup if you count the compile time and a 200% speedup in terms of expected speedup.
 
-Changelog:
+### Changelog:
 2/2/25 -- Added liger rope kernel. This is 20% slower in the singular test (because of JIT) but about 20% faster in only 10 iterations, so a significant speedup.
