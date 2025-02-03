@@ -91,21 +91,18 @@ class LlamaAttention(nn.Module):
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        # Reshape for RoPE
-        # Reshape for RoPE
         query_states = rearrange(query_states, "b s (h d) -> b s h d", h=self.num_heads, d=self.head_dim)
         key_states = rearrange(key_states, "b s (h d) -> b s h d", h=self.num_key_value_heads, d=self.head_dim)
         value_states = rearrange(value_states, "b s (h d) -> b s h d", h=self.num_key_value_heads, d=self.head_dim)
 
-        # Get position-specific cos and sin
+        # Slice off position specific rope freqs from the cached freqs
         cos = self.cos_cached[:, position_ids]  # [1, bsz, seq_len, dim]
         sin = self.sin_cached[:, position_ids]  # [1, bsz, seq_len, dim]
         
-        # Apply Liger RoPE
         query_states, key_states = LigerRopeFunction.apply(
             query_states,
             key_states,
-            cos.squeeze(0),  # Remove the first dimension
+            cos.squeeze(0),
             sin.squeeze(0),
             position_ids
         )
