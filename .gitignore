@@ -1,2 +1,5 @@
 SmolLM2-135M-Instruct/
 tiny-random-LlamaForCausalLM/
+**/__pycache__/**
+*.pyc
+*.pyo
