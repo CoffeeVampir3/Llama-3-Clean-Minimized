@@ -6,3 +6,5 @@ On my 3090 TI the hf control takes around (Uncompiled because compiled ver never
 `verify-modeling.py` prints debugging info and runs the modeling files in this repo.
 Same hardware, modeling took: 
 `Compiling took: 0.50 seconds -- Execution time: 0.57 seconds` x2 `Compiling took: 0.50 seconds -- Execution time: 0.58 seconds`
+
+There's about a 100% speedup if you count the compile time and a 200% speedup without counting it.
