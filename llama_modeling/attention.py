@@ -4,17 +4,6 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 from einops import rearrange, repeat
-
-from .rope import LlamaRotaryEmbedding, apply_rotary_pos_emb
-from .liger_rope import LigerRopeFunction
-from .config import LlamaConfig
-
-from flash_attn import flash_attn_func
-from typing import Optional, Tuple
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
-from einops import rearrange, repeat
 from .liger_rope import LigerRopeFunction
 from .config import LlamaConfig
 
