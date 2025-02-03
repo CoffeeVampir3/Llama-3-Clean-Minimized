@@ -40,7 +40,6 @@ class LlamaAttention(nn.Module):
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
         
-        # Initialize rotary embeddings similar to LlamaRotaryEmbedding but for Liger
         self.register_buffer(
             "cos_cached",
             self._compute_rope_embeddings(
@@ -66,14 +65,13 @@ class LlamaAttention(nn.Module):
 
     def _compute_rope_embeddings(self, max_position_embeddings, head_dim, base=10000, dtype=None, device=None):
         """Compute RoPE embeddings similar to LlamaRotaryEmbedding"""
-        # Match HF's implementation
         inv_freq = 1.0 / (base ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
         t = torch.arange(max_position_embeddings, device=device, dtype=torch.float32)
         freqs = torch.einsum("i,j->ij", t, inv_freq)
         emb = torch.cat((freqs, freqs), dim=-1)
         cos = emb.cos().to(dtype)
         sin = emb.sin().to(dtype)
-        return cos.unsqueeze(0), sin.unsqueeze(0)  # Add batch dimension
+        return cos.unsqueeze(0), sin.unsqueeze(0)
 
     def forward(
         self,
@@ -81,6 +79,7 @@ class LlamaAttention(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:
+        # In B S (H D)
         bsz, seq_len, _ = hidden_states.size()
         
         if position_ids is None:
