@@ -1,4 +1,4 @@
-import math, random, json
+import math, random, json, time
 from typing import Optional, Tuple
 import torch
 import torch.nn as nn
@@ -66,8 +66,12 @@ random.seed(SEED)
 torch.backends.cudnn.deterministic = True
 torch.backends.cudnn.benchmark = False
 
+start_time = time.time()
 with torch.amp.autocast(device, dtype=forward_dtype):
     output_ids = model.generate(combined_input.to(device), max_new_tokens=30, temperature=0.0)
+end_time = time.time()
+elapsed_time = end_time - start_time
 
 generated_text = tokenizer.decode(output_ids[0], skip_special_tokens=False, decode_special_tokens=False)
 print(generated_text)
+print(f"Execution time: {elapsed_time:.2f} seconds")

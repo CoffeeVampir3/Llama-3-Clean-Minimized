@@ -1,5 +1,6 @@
 import torch
 import random
+import time
 from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
 
 SEED = 42
@@ -39,8 +40,9 @@ imstart = tokenizer("<|im_start|>assistant\n", return_tensors="pt")
 combined_input = torch.cat([inputs.input_ids, imstart.input_ids], dim=1)
 
 print(tokenizer.decode(combined_input[0]))
-output = model(combined_input)
 
+start_time = time.time()
+output = model(combined_input)
 for _ in range(30):
     output = model(combined_input)
     logits = output.logits[:, -1, :]
@@ -48,4 +50,8 @@ for _ in range(30):
     decoded = tokenizer.decode(next_token)
     combined_input = torch.cat([combined_input, next_token.unsqueeze(0)], dim=1)
 
+end_time = time.time()
+elapsed_time = end_time - start_time
+
 print(f"Final output: {tokenizer.decode(combined_input[0])}")
+print(f"Execution time: {elapsed_time:.2f} seconds")
