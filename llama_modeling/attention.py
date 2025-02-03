@@ -6,6 +6,16 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 
 from .rope import LlamaRotaryEmbedding, apply_rotary_pos_emb
+from .liger_rope import LigerRopeFunction
+from .config import LlamaConfig
+
+from flash_attn import flash_attn_func
+from typing import Optional, Tuple
+import torch
+import torch.nn as nn
+import torch.nn.functional as F
+from einops import rearrange, repeat
+from .liger_rope import LigerRopeFunction
 from .config import LlamaConfig
 
 class LlamaAttention(nn.Module):
@@ -29,11 +39,41 @@ class LlamaAttention(nn.Module):
         self.k_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.v_proj = nn.Linear(self.hidden_size, self.num_key_value_heads * self.head_dim, bias=False)
         self.o_proj = nn.Linear(self.num_heads * self.head_dim, self.hidden_size, bias=False)
-        self.rotary_emb = LlamaRotaryEmbedding(
-            self.head_dim,
-            max_position_embeddings=self.max_position_embeddings,
-            base=self.rope_theta,
+        
+        # Initialize rotary embeddings similar to LlamaRotaryEmbedding but for Liger
+        self.register_buffer(
+            "cos_cached",
+            self._compute_rope_embeddings(
+                self.max_position_embeddings,
+                self.head_dim,
+                self.rope_theta,
+                dtype=torch.float32,
+                device=self.q_proj.weight.device,
+            )[0],
+            persistent=False,
         )
+        self.register_buffer(
+            "sin_cached",
+            self._compute_rope_embeddings(
+                self.max_position_embeddings,
+                self.head_dim,
+                self.rope_theta,
+                dtype=torch.float32,
+                device=self.q_proj.weight.device,
+            )[1],
+            persistent=False,
+        )
+
+    def _compute_rope_embeddings(self, max_position_embeddings, head_dim, base=10000, dtype=None, device=None):
+        """Compute RoPE embeddings similar to LlamaRotaryEmbedding"""
+        # Match HF's implementation
+        inv_freq = 1.0 / (base ** (torch.arange(0, head_dim, 2, device=device).float() / head_dim))
+        t = torch.arange(max_position_embeddings, device=device, dtype=torch.float32)
+        freqs = torch.einsum("i,j->ij", t, inv_freq)
+        emb = torch.cat((freqs, freqs), dim=-1)
+        cos = emb.cos().to(dtype)
+        sin = emb.sin().to(dtype)
+        return cos.unsqueeze(0), sin.unsqueeze(0)  # Add batch dimension
 
     def forward(
         self,
@@ -41,28 +81,36 @@ class LlamaAttention(nn.Module):
         attention_mask: Optional[torch.Tensor] = None,
         position_ids: Optional[torch.LongTensor] = None,
     ) -> torch.Tensor:
-        bsz, _, _ = hidden_states.size()
+        bsz, seq_len, _ = hidden_states.size()
         
         if position_ids is None:
-            position_ids = repeat(
-                torch.arange(seq_len, device=input_ids.device),
-                'l -> b l',
-                b=bsz
-            )
+            position_ids = torch.arange(seq_len, device=hidden_states.device)
+            position_ids = repeat(position_ids, 'l -> b l', b=bsz)
         
         query_states = self.q_proj(hidden_states)
         key_states = self.k_proj(hidden_states)
         value_states = self.v_proj(hidden_states)
 
-        query_states = rearrange(query_states, "b s (h d) -> b h s d", h=self.num_heads)
-        key_states = rearrange(key_states, "b s (h d) -> b h s d", h=self.num_key_value_heads)
-        value_states = rearrange(value_states, "b s (h d) -> b h s d", h=self.num_key_value_heads)
-
-        # @Z TODO:: rope expects (b h s d) 
-        cos, sin = self.rotary_emb(position_ids)
-        query_states, key_states = apply_rotary_pos_emb(query_states, key_states, cos, sin)
+        # Reshape for RoPE
+        # Reshape for RoPE
+        query_states = rearrange(query_states, "b s (h d) -> b h s d", h=self.num_heads, d=self.head_dim)
+        key_states = rearrange(key_states, "b s (h d) -> b h s d", h=self.num_key_value_heads, d=self.head_dim)
+        value_states = rearrange(value_states, "b s (h d) -> b h s d", h=self.num_key_value_heads, d=self.head_dim)
         
-        # FA Expects (b s h d) 
+        # Get position-specific cos and sin
+        cos = self.cos_cached[:, position_ids]  # [1, bsz, seq_len, dim]
+        sin = self.sin_cached[:, position_ids]  # [1, bsz, seq_len, dim]
+        
+        # Apply Liger RoPE
+        query_states, key_states = LigerRopeFunction.apply(
+            query_states,
+            key_states,
+            cos.squeeze(0),  # Remove the first dimension
+            sin.squeeze(0),
+            position_ids
+        )
+        
+        # Reshape for flash attention
         query_states = rearrange(query_states, "b h s d -> b s h d")
         key_states = rearrange(key_states, "b h s d -> b s h d")
         value_states = rearrange(value_states, "b h s d -> b s h d")
@@ -74,6 +122,6 @@ class LlamaAttention(nn.Module):
             dropout_p=0.0,
             causal=attention_mask is None
         )
-
+        
         attn_output = rearrange(attn_output, "b s h d -> b s (h d)")
         return self.o_proj(attn_output)
