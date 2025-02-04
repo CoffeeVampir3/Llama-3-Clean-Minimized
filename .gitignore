@@ -5,3 +5,4 @@ tiny-random-LlamaForCausalLM/
 *.pyo
 Data_big
 logs/
+*.pt

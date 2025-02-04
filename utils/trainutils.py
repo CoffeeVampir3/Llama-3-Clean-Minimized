@@ -42,7 +42,7 @@ def load_checkpoint(model, filename="checkpoint.safetensors"):
         model_state = load_file(filename)
         model.load_state_dict(model_state)
     except Exception as e:
-        model_state = torch.load(filename.replace('.safetensors', '.pt'))
+        model_state = torch.load(filename.replace('.safetensors', '.pt'), weights_only=True)
         model.load_state_dict(model_state)
         
 class TBLogger:
