@@ -3,3 +3,5 @@ tiny-random-LlamaForCausalLM/
 **/__pycache__/**
 *.pyc
 *.pyo
+Data_big
+logs/
